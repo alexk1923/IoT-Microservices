@@ -1,0 +1,51 @@
+version: "3"
+
+services:
+  broker:
+    image: eclipse-mosquitto
+    hostname: mqtt_broker
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto:/etc/mosquitto
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+
+  influxdb:
+    image: influxdb:latest
+    restart: unless-stopped
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=my-user
+      - DOCKER_INFLUXDB_INIT_PASSWORD=my-password
+      - DOCKER_INFLUXDB_INIT_ORG=my-org
+      - DOCKER_INFLUXDB_INIT_BUCKET=my-bucket
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=3e5c10cb91b82e42d89fa95267e8c40b33a387e54d7f895eec5ff854804d3696
+    volumes:
+      - ./localdb/myInfluxVolume:/var/lib/influxdb2
+    ports:
+      - "8086:8086"
+
+  analytics:
+    image: grafana/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=asistent
+      - GF_SECURITY_ADMIN_PASSWORD=grafanaSPRC2023
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./localdb/myGrafanaVolume:/var/lib/grafana
+    depends_on:
+      - influxdb
+
+  app:
+    build:
+      context: .
+      dockerfile: app.dockerfile
+    image: app
+    ports:
+      - 8000:8000
+    environment:
+      - PORT=8000
+    depends_on:
+      - broker
+      - influxdb
