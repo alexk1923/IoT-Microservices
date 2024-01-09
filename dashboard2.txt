@@ -1,0 +1,53 @@
+measurement = "bat"
+
+from(bucket: "my-bucket")
+  |> range(start: -6h, stop: 1s)
+  |> filter(fn: (r) => r._field == "value" and r._measurement == measurement)
+  |> group(columns: ["station"])
+  |> timedMovingAverage(every: 1s, period: 6h)
+  |> drop(columns: ["_start", "_stop"])
+  |> pivot(rowKey:["_time"], columnKey: ["station"], valueColumn: "_value")
+
+
+==================================================================================
+
+measurement = "bat"
+
+avg = from(bucket: "my-bucket")
+  |> range(start: -24h)
+  |> filter(fn: (r) => r._field == "value" and r._measurement == measurement)
+  |> group(columns: ["station"])
+  |> mean()
+  |> rename(columns: {_value: "Average"})
+  |> drop(columns: ["_start", "_stop", "_field", "_time", "location", "_measurement"])
+
+min = from(bucket: "my-bucket")
+  |> range(start: -24h)
+  |> filter(fn: (r) => r._field == "value" and r._measurement == measurement)
+  |> group(columns: ["station"])
+  |> min()
+  |> rename(columns: {_value: "Min"})
+  |> drop(columns: ["_start", "_stop", "_field", "_time", "location", "_measurement"])
+
+max = from(bucket: "my-bucket")
+  |> range(start: -24h)
+  |> filter(fn: (r) => r._field == "value" and r._measurement == measurement)
+  |> group(columns: ["station"])
+  |> max()
+  |> rename(columns: {_value: "Max"})
+  |> drop(columns: ["_start", "_stop", "_field", "_time", "location", "_measurement"])
+
+current = from(bucket: "my-bucket")
+  |> range(start: -24h)
+  |> filter(fn: (r) => r._field == "value" and r._measurement == measurement)
+  |> group(columns: ["station"])
+  |> last()
+  |> rename(columns: {_value: "Current"})
+  |> drop(columns: ["_start", "_stop", "_field", "_time", "location", "_measurement"])
+
+avg_min = join(tables: {average: avg, min: min}, on: ["station"])
+avg_min_max = join(tables: {avg_min: avg_min, max: max}, on: ["station"])
+all = join(tables: {avg_min_max: avg_min_max, current: current}, on: ["station"])
+  |> group()
+
+all

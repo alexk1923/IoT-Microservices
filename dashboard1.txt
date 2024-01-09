@@ -1,0 +1,14 @@
+from(bucket: "my-bucket")
+  |> range(start: -6h, stop: 1s)
+  |> map(fn: (r) => ({ _time: r._time, _value: r._value, series_name: "${r.station}.${r._measurement}" }))
+  |> group(columns: ["series_name"])
+  |> timedMovingAverage(every: 1s, period: 6h)
+
+
+from(bucket: "my-bucket")
+  |> range(start: -6h)
+  |> map(fn: (r) => ({ _time: r._time, _value: r._value, series_name: "${r.station}.${r._measurement}" }))
+  |> group(columns: ["series_name"])
+  |> timedMovingAverage(every: 1s, period: 6h)
+  |> drop(columns: ["_start", "_stop"])
+  |> pivot(rowKey:["_time"], columnKey: ["series_name"], valueColumn: "_value")
