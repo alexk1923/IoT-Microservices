@@ -51,17 +51,32 @@ client.on("message", (topic, message) => {
             return;
         }
 
+        let currentTimestamp = new Date();
+
+        for (let key of Object.keys(jsonMessage)) {
+            if (key === "timestamp") {
+                currentTimestamp = new Date(jsonMessage[key]);
+            }
+        }
+
         for (let key of Object.keys(jsonMessage)) {
             console.log(typeof jsonMessage[key]);
-            let point = new Point(`${key}`)
-                .tag('location', topicStrings[0])
-                .tag('station', topicStrings[1])
-                .floatField('value', jsonMessage[key])
-                .timestamp()
 
-            writeClient.writePoint(point);
-            writeClient.flush();
-            console.log("Write completed");
+            if (key !== "timestamp" && typeof jsonMessage[key] === "number") {
+
+                console.log("Current timestamp: ");
+                console.log(currentTimestamp);
+                let point = new Point(`${key}`)
+                    .tag('location', topicStrings[0])
+                    .tag('station', topicStrings[1])
+                    .floatField('value', jsonMessage[key])
+                    .timestamp(currentTimestamp)
+
+                writeClient.writePoint(point);
+                writeClient.flush();
+                console.log("Write completed");
+            }
+
         }
     }
 
