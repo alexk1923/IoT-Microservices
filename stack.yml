@@ -9,6 +9,8 @@ services:
     volumes:
       - ./mosquitto:/etc/mosquitto
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    networks:
+      - broker_network
 
   influxdb:
     image: influxdb:latest
@@ -17,35 +19,47 @@ services:
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=my-user
       - DOCKER_INFLUXDB_INIT_PASSWORD=my-password
-      - DOCKER_INFLUXDB_INIT_ORG=my-org
-      - DOCKER_INFLUXDB_INIT_BUCKET=my-bucket
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=3e5c10cb91b82e42d89fa95267e8c40b33a387e54d7f895eec5ff854804d3696
+    env_file:
+      - .env
     volumes:
       - ./localdb/myInfluxVolume:/var/lib/influxdb2
-    ports:
-      - "8086:8086"
+    networks:
+      - db_network
 
-  analytics:
+  grafana:
     image: grafana/grafana
+    env_file:
+      - .env
     environment:
       - GF_SECURITY_ADMIN_USER=asistent
       - GF_SECURITY_ADMIN_PASSWORD=grafanaSPRC2023
+      - INFLUXDB_TOKEN=${DOCKER_INFLUXDB_INIT_ADMIN_TOKEN}
     ports:
-      - "3000:3000"
+      - "80:3000"
     volumes:
       - ./localdb/myGrafanaVolume:/var/lib/grafana
+      - ./provisioning:/etc/grafana/provisioning
     depends_on:
       - influxdb
+    networks:
+      - db_network
 
   app:
-    build:
-      context: .
-      dockerfile: app.dockerfile
-    image: app
+    image: adapter
     ports:
       - 8000:8000
     environment:
       - PORT=8000
+      - DEBUG_DATA_FLOW=true
     depends_on:
       - broker
       - influxdb
+    networks:
+      - db_network
+      - broker_network
+    env_file:
+      - .env
+
+networks:
+  db_network:
+  broker_network:

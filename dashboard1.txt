@@ -12,3 +12,32 @@ from(bucket: "my-bucket")
   |> timedMovingAverage(every: 1s, period: 6h)
   |> drop(columns: ["_start", "_stop"])
   |> pivot(rowKey:["_time"], columnKey: ["series_name"], valueColumn: "_value")
+
+
+
+
+
+  ========CORRECT?===========
+average = from(bucket: "my-bucket")
+  |> range(start: -6h)
+  |> filter(fn: (r) => r.location == "UPB")
+  |> map(fn: (r) => ({ _time: r._time, _value: r._value, series_name: "${r.station}.${r._measurement}"}))
+  |> map(fn: (r) => ({ r with _count: 1 }))
+  |> cumulativeSum(columns: ["_value", "_count"])
+  |> map(fn: (r) => ({ r with _value: r._value / float(v: r._count) }))
+  |> drop(columns: ["_count"])
+  |> group(columns: ["series_name"])
+  |>group()
+
+
+main = from(bucket: "my-bucket")
+  |> range(start: -6h)
+  |> filter(fn: (r) => r.location == "UPB")
+  |> map(fn: (r) => ({ _time: r._time, _value: r._value, series_name: "${r.station}.${r._measurement}" }))
+  
+
+all = join(tables: {t1: average, t2: main}, on: ["_time", "series_name"])
+  |> group(columns: ["series_name"])
+  |> pivot(rowKey:["_time"], columnKey: ["series_name"], valueColumn: "_value_t1")
+
+all

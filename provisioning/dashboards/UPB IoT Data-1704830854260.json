@@ -1,0 +1,213 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 3,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "c4777bcb-d355-46b9-bb90-a1532932dbf2"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 5,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "maxDataPoints": 21600,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.2.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "c4777bcb-d355-46b9-bb90-a1532932dbf2"
+          },
+          "query": "from(bucket: \"my-bucket\")\r\n  |> range(start: -6h, stop: 1s)\r\n  |> filter(fn: (r) => r.location == \"UPB\")\r\n  |> map(fn: (r) => ({ _time: r._time, _value: r._value, series_name: \"${r.station}.${r._measurement}\" }))\r\n  |> group(columns: [\"series_name\"])\r\n  |> timedMovingAverage(every: 1s, period: 6h)",
+          "refId": "A"
+        }
+      ],
+      "title": "UPB IoT Data",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "c4777bcb-d355-46b9-bb90-a1532932dbf2"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "noValue": "-",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 2,
+      "maxDataPoints": 21600,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "frameIndex": 0,
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "_time"
+          }
+        ]
+      },
+      "pluginVersion": "10.2.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "c4777bcb-d355-46b9-bb90-a1532932dbf2"
+          },
+          "query": "average = from(bucket: \"my-bucket\")\r\n  |> range(start: -6h)\r\n  |> filter(fn: (r) => r.location == \"UPB\")\r\n  |> map(fn: (r) => ({ _time: r._time, _value: r._value, series_name: \"${r.station}.${r._measurement}\"}))\r\n  |> map(fn: (r) => ({ r with _count: 1 }))\r\n  |> cumulativeSum(columns: [\"_value\", \"_count\"])\r\n  |> map(fn: (r) => ({ r with _value: r._value / float(v: r._count) }))\r\n  |> drop(columns: [\"_count\"])\r\n  |> group(columns: [\"series_name\"])\r\n  |>group()\r\n\r\n\r\nmain = from(bucket: \"my-bucket\")\r\n  |> range(start: -6h)\r\n  |> filter(fn: (r) => r.location == \"UPB\")\r\n  |> map(fn: (r) => ({ _time: r._time, _value: r._value, series_name: \"${r.station}.${r._measurement}\" }))\r\n  \r\n\r\nall = join(tables: {t1: average, t2: main}, on: [\"_time\", \"series_name\"])\r\n  |> group(columns: [\"series_name\"])\r\n  |> pivot(rowKey:[\"_time\"], columnKey: [\"series_name\"], valueColumn: \"_value_t1\")\r\n\r\nall",
+          "refId": "A"
+        }
+      ],
+      "title": "Tabel",
+      "transformations": [],
+      "type": "table"
+    }
+  ],
+  "refresh": "30m",
+  "schemaVersion": 39,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "UPB IoT Data",
+  "uid": "d2ccc737-fc8e-4af3-8c26-5ffb962c7477",
+  "version": 8,
+  "weekStart": ""
+}

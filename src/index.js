@@ -3,22 +3,34 @@ import { createInterface } from "readline";
 
 import { InfluxDB, Point } from '@influxdata/influxdb-client'
 
-const influxDB = new InfluxDB({ url: "http://172.28.106.26:8086/", token: "3e5c10cb91b82e42d89fa95267e8c40b33a387e54d7f895eec5ff854804d3696" })
-const writeClient = influxDB.getWriteApi("my-org", "my-bucket", "s");
+const influxDB = new InfluxDB({ url: "http://influxdb:8086/", token: process.env.DOCKER_INFLUXDB_INIT_ADMIN_TOKEN })
+const writeClient = influxDB.getWriteApi(process.env.DOCKER_INFLUXDB_INIT_ORG, process.env.DOCKER_INFLUXDB_INIT_BUCKET, "s");
+
+const logInfo = (message) => {
+    if (process.env.DEBUG_DATA_FLOW) {
+        console.log(message);
+    }
+}
+
+const logError = (message) => {
+    if (process.env.DEBUG_DATA_FLOW) {
+        console.error(message);
+    }
+}
 
 const rl = createInterface({
     input: process.stdin,
     output: process.stdout,
 })
 
-const client = connect("mqtt://localhost:1883");
+const client = connect("mqtt://mqtt_broker:1883");
 
 client.on("connect", () => {
     client.subscribe("#", (err) => {
         if (!err) {
-            console.log("Subscribed to all topics");
+            logInfo("Adapter has started. Subscribed to all topics");
         } else {
-            console.error("Error subscribing to topic:", err);
+            logError("Error subscribing to all topics:", err);
             process.exit(1); // Exit the application if subscription fails
         }
     });
@@ -35,8 +47,7 @@ function isJsonString(str) {
 
 
 client.on("message", (topic, message) => {
-    // message is Buffer
-    console.log("Topic: " + topic.toString());
+    logInfo("Received a message by topic: " + topic.toString());
     const messageString = message.toString();
 
     if (isJsonString(messageString)) {
@@ -56,27 +67,30 @@ client.on("message", (topic, message) => {
         for (let key of Object.keys(jsonMessage)) {
             if (key === "timestamp") {
                 currentTimestamp = new Date(jsonMessage[key]);
+                logInfo("Data timestamp is " + currentTimestamp);
+            } else {
+                logInfo("Data timestamp is NOW");
             }
         }
 
+
         for (let key of Object.keys(jsonMessage)) {
-            console.log(typeof jsonMessage[key]);
-
             if (key !== "timestamp" && typeof jsonMessage[key] === "number") {
-
-                console.log("Current timestamp: ");
-                console.log(currentTimestamp);
                 let point = new Point(`${key}`)
                     .tag('location', topicStrings[0])
                     .tag('station', topicStrings[1])
                     .floatField('value', jsonMessage[key])
                     .timestamp(currentTimestamp)
 
-                writeClient.writePoint(point);
-                writeClient.flush();
-                console.log("Write completed");
+                try {
+                    writeClient.writePoint(point);
+                    writeClient.flush();
+                    logInfo(`${topicStrings[0]}.${topicStrings[1]}.${key} ${jsonMessage[key]} `);
+                    logInfo("");
+                } catch (err) {
+                    logError("Error in writing points to the database " + err);
+                }
             }
-
         }
     }
 
@@ -84,9 +98,8 @@ client.on("message", (topic, message) => {
 });
 
 
-
 rl.on("SIGINT", () => {
-    console.log("Closing MQTT client");
+    logInfo("Closing MQTT client");
     client.end();
     process.exit();
 });

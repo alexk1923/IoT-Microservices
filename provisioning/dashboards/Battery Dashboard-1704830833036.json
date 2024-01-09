@@ -1,0 +1,218 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 4,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "c4777bcb-d355-46b9-bb90-a1532932dbf2"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 3,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "maxDataPoints": 21600,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "c4777bcb-d355-46b9-bb90-a1532932dbf2"
+          },
+          "query": "measurement = \"bat\"\r\n\r\nfrom(bucket: \"my-bucket\")\r\n  |> range(start: -6h, stop: 1s)\r\n  |> filter(fn: (r) => r._field == \"value\" and r._measurement == measurement)\r\n  |> group(columns: [\"station\"])\r\n  |> timedMovingAverage(every: 1s, period: 6h)\r\n  |> drop(columns: [\"_start\", \"_stop\"])\r\n  |> pivot(rowKey:[\"_time\"], columnKey: [\"station\"], valueColumn: \"_value\")",
+          "refId": "A"
+        }
+      ],
+      "title": "Battery Dashboard",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "c4777bcb-d355-46b9-bb90-a1532932dbf2"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 2,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "10.2.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "c4777bcb-d355-46b9-bb90-a1532932dbf2"
+          },
+          "query": "measurement = \"bat\"\r\n\r\navg = from(bucket: \"my-bucket\")\r\n  |> range(start: -24h)\r\n  |> filter(fn: (r) => r._field == \"value\" and r._measurement == measurement)\r\n  |> group(columns: [\"station\"])\r\n  |> mean()\r\n  |> rename(columns: {_value: \"Average\"})\r\n  |> drop(columns: [\"_start\", \"_stop\", \"_field\", \"_time\", \"location\", \"_measurement\"])\r\n\r\nmin = from(bucket: \"my-bucket\")\r\n  |> range(start: -24h)\r\n  |> filter(fn: (r) => r._field == \"value\" and r._measurement == measurement)\r\n  |> group(columns: [\"station\"])\r\n  |> min()\r\n  |> rename(columns: {_value: \"Min\"})\r\n  |> drop(columns: [\"_start\", \"_stop\", \"_field\", \"_time\", \"location\", \"_measurement\"])\r\n\r\nmax = from(bucket: \"my-bucket\")\r\n  |> range(start: -24h)\r\n  |> filter(fn: (r) => r._field == \"value\" and r._measurement == measurement)\r\n  |> group(columns: [\"station\"])\r\n  |> max()\r\n  |> rename(columns: {_value: \"Max\"})\r\n  |> drop(columns: [\"_start\", \"_stop\", \"_field\", \"_time\", \"location\", \"_measurement\"])\r\n\r\ncurrent = from(bucket: \"my-bucket\")\r\n  |> range(start: -24h)\r\n  |> filter(fn: (r) => r._field == \"value\" and r._measurement == measurement)\r\n  |> group(columns: [\"station\"])\r\n  |> last()\r\n  |> rename(columns: {_value: \"Current\"})\r\n  |> drop(columns: [\"_start\", \"_stop\", \"_field\", \"_time\", \"location\", \"_measurement\"])\r\n\r\navg_min = join(tables: {average: avg, min: min}, on: [\"station\"])\r\navg_min_max = join(tables: {avg_min: avg_min, max: max}, on: [\"station\"])\r\nall = join(tables: {avg_min_max: avg_min_max, current: current}, on: [\"station\"])\r\n  |> group()\r\n\r\nall",
+          "refId": "A"
+        }
+      ],
+      "title": "Static aggregation",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "Average": 4,
+              "Current": 1,
+              "Max": 3,
+              "Min": 2,
+              "station": 0
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "refresh": "30m",
+  "schemaVersion": 39,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Battery Dashboard",
+  "uid": "c75e1816-f77e-4fbd-9693-80c0848df93c",
+  "version": 5,
+  "weekStart": ""
+}

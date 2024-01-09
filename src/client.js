@@ -25,11 +25,8 @@ client.on("connect", () => {
 function ask() {
     rl.question("", (answer) => {
         if (answer.trim() !== "") {
-
             const location = topics[Math.floor(Math.random() * topics.length)];
             const station = location.stations[Math.floor(Math.random() * location.stations.length)];
-
-
 
             client.publish(`${location.location}/${station}`, answer, (err) => {
                 if (err) {
