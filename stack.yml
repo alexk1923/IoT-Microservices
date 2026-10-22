@@ -14,11 +14,8 @@ services:
 
   influxdb:
     image: influxdb:latest
-    restart: unless-stopped
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=my-user
-      - DOCKER_INFLUXDB_INIT_PASSWORD=my-password
     env_file:
       - .env
     volumes:
@@ -34,6 +31,7 @@ services:
       - GF_SECURITY_ADMIN_USER=asistent
       - GF_SECURITY_ADMIN_PASSWORD=grafanaSPRC2023
       - INFLUXDB_TOKEN=${DOCKER_INFLUXDB_INIT_ADMIN_TOKEN}
+    user: "${UID}:${GID}"
     ports:
       - "80:3000"
     volumes:

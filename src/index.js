@@ -50,50 +50,70 @@ client.on("message", (topic, message) => {
     logInfo("Received a message by topic: " + topic.toString());
     const messageString = message.toString();
 
-    if (isJsonString(messageString)) {
-        const jsonMessage = JSON.parse(message.toString());
-        console.log(jsonMessage);
-        let topicStrings = topic.split("/");
-        console.log(topicStrings);
+    if (!isJsonString(messageString)) {
+        logError("Invalid message format. Please provide a JSON format that includes the data.");
+        return;
+    }
+
+    const jsonMessage = JSON.parse(message.toString());
 
 
-        if (topicStrings.length > 2) {
-            console.log("Invalid message. Wrong location/station format");
-            return;
+    if (Object.keys(jsonMessage).length === 0 || (Object.keys(jsonMessage).length === 1 && Object.keys(jsonMessage).includes("timestamp"))) {
+        logError("JSON Message could not be empty or have only timestamp field.");
+        return;
+    }
+
+
+    let topicStrings = topic.split("/");
+
+    // Check if the topic structure is valid
+    if (topicStrings.length > 2) {
+        logInfo("Invalid message. Wrong location/station format");
+        return;
+    }
+
+    // Check if the timestamp key is present and set the time
+    let currentTimestamp = new Date();
+    let timestampKey = false;
+
+    // Change timestamp
+    for (let key of Object.keys(jsonMessage)) {
+        if (key === "timestamp") {
+            timestampKey = true;
+            currentTimestamp = new Date(jsonMessage[key]);
         }
+    }
 
-        let currentTimestamp = new Date();
+    if (isNaN(currentTimestamp)) {
+        logError("Provided timestamp is invalid.");
+        return;
+    }
 
-        for (let key of Object.keys(jsonMessage)) {
-            if (key === "timestamp") {
-                currentTimestamp = new Date(jsonMessage[key]);
-                logInfo("Data timestamp is " + currentTimestamp);
-            } else {
-                logInfo("Data timestamp is NOW");
-            }
-        }
+    if (timestampKey) {
+        logInfo("Data timestamp is " + currentTimestamp);
+    } else {
+        logInfo("Data timestamp is NOW");
+    }
 
 
-        for (let key of Object.keys(jsonMessage)) {
-            if (key !== "timestamp" && typeof jsonMessage[key] === "number") {
+    // Add new point for each valid key
+    for (let key of Object.keys(jsonMessage)) {
+        if (key !== "timestamp" && typeof jsonMessage[key] === "number") {
+            try {
                 let point = new Point(`${key}`)
                     .tag('location', topicStrings[0])
                     .tag('station', topicStrings[1])
                     .floatField('value', jsonMessage[key])
                     .timestamp(currentTimestamp)
 
-                try {
-                    writeClient.writePoint(point);
-                    writeClient.flush();
-                    logInfo(`${topicStrings[0]}.${topicStrings[1]}.${key} ${jsonMessage[key]} `);
-                    logInfo("");
-                } catch (err) {
-                    logError("Error in writing points to the database " + err);
-                }
+                writeClient.writePoint(point);
+                logInfo(`${topicStrings[0]}.${topicStrings[1]}.${key} ${jsonMessage[key]} `);
+            } catch (err) {
+                logError("Error in writing points to the database " + err);
+                return;
             }
         }
     }
-
 
 });
 

@@ -6,13 +6,13 @@ datasources:
     access: proxy
     isDefault: true
     basicAuth: true
-    basicAuthUser: my-user
-    basicAuthPassword: my-password
+    basicAuthUser: ${DOCKER_INFLUXDB_INIT_USERNAME}
+    basicAuthPassword: ${DOCKER_INFLUXDB_INIT_PASSWORD}
     url: http://influxdb:8086
     jsonData:
       version: Flux
-      organization: my-org
-      defaultBucket: my-bucket
+      organization: ${DOCKER_INFLUXDB_INIT_ORG}
+      defaultBucket: ${DOCKER_INFLUXDB_INIT_BUCKET}
 
     secureJsonData:
-      token: 3e5c10cb91b82e42d89fa95267e8c40b33a387e54d7f895eec5ff854804d3696
+      token: ${DOCKER_INFLUXDB_INIT_ADMIN_TOKEN}
